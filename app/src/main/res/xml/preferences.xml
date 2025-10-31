@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreferenceCompat
+        app:key="autostart"
+        app:title="부팅 시 자동 실행"
+        app:icon="@drawable/outline_autorenew_24" />
+
+</PreferenceScreen>

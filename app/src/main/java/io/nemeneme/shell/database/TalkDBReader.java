@@ -74,8 +74,10 @@ public class TalkDBReader {
         try {
             Map<String, String> res = executeQuerySingle(
                     "SELECT " +
-                            "l.user_id, r.type, " +
-                            "CASE r.type " +
+                            "myo.nickname as my_open_nickname," +
+                            "l.user_id," +
+                            "r.type," +
+                            "CASE r.type" +
                             " WHEN 'OM' THEN o.nickname " +
                             " WHEN 'PlusChat' THEN f.name " +
                             " ELSE NULL END AS user_name, " +
@@ -86,12 +88,18 @@ public class TalkDBReader {
                             "FROM chat_logs l " +
                             "JOIN chat_rooms r ON l.chat_id = r.id " +
                             "LEFT JOIN open_chat_member o ON (r.type = 'OM' AND l.user_id = o.user_id) " +
+                            "LEFT JOIN open_profile myo ON (r.type = 'OM' AND l.user_id = myo.user_id AND myo.link_id = (SELECT link_id FROM chat_rooms WHERE id = l.chat_id)) " +
                             "LEFT JOIN friends f ON (r.type = 'PlusChat' AND l.user_id = f.id) " +
                             "WHERE l.id = ?;",
                     new String[]{String.valueOf(logId)}
             );
 
             if (res == null) return "";
+
+            String userId = Objects.requireNonNull(res.get("user_id"));
+            if (userId.equals(String.valueOf(myUserId))) {
+                return Objects.requireNonNullElse(res.get("my_open_nickname"), "");
+            }
 
             String type = Objects.requireNonNull(res.get("type"));
             String userName = res.get("user_name");

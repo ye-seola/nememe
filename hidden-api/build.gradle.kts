@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.nemui.hidden_api"
+    namespace = "io.nemeneme.hidden_api"
     compileSdk = 36
 
     defaultConfig {

@@ -13,7 +13,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 public class FileProvider extends ContentProvider {
-    public static final String BASE_CONTENT_URI = "content://com.nemeneme.provider/";
+    public static final String BASE_CONTENT_URI = "content://io.nemeneme.provider/";
 
     @Override
     public boolean onCreate() {

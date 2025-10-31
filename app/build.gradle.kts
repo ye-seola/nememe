@@ -30,10 +30,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
     implementation(libs.material)
     compileOnly(project(":hidden-api"))
     implementation("dev.rikka.tools.refine:runtime:4.4.0")
+    implementation("androidx.preference:preference-ktx:1.2.0")
 }

@@ -8,7 +8,7 @@ import java.util.Objects;
 import dev.rikka.tools.refine.Refine;
 
 public class AEnvironment {
-    public static final String PACKAGE_NAME = "com.nemeneme";
+    public static final String PACKAGE_NAME = "io.nemeneme";
     private static ActivityThread mainThread;
     private static Context appContext;
 
