@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "io.nemeneme"
+    namespace = "io.nememe"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.nemeneme"
+        applicationId = "io.nememe"
         minSdk = 28
         targetSdk = 36
         versionCode = 1

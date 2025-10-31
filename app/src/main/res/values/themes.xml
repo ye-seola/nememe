@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.Nemeneme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Nememe" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

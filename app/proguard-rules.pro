@@ -1,4 +1,4 @@
--keep class io.nemeneme.shell.Main {
+-keep class io.nememe.shell.Main {
     public static void main(java.lang.String[]);
 }
 

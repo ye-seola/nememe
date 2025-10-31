@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Nemeneme"
+rootProject.name = "Nememe"
 include(":app")
 include(":hidden-api")
