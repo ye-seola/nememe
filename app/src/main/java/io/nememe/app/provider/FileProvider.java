@@ -6,11 +6,15 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+
+import io.nememe.app.App;
 
 public class FileProvider extends ContentProvider {
     public static final String BASE_CONTENT_URI = "content://io.nememe.provider/";
@@ -49,6 +53,7 @@ public class FileProvider extends ContentProvider {
 
     @Override
     public ParcelFileDescriptor openFile(Uri uri, @NonNull String mode) throws FileNotFoundException {
+
         if (!uri.toString().startsWith(BASE_CONTENT_URI)) {
             throw new UnsupportedOperationException("Unsupported URI: " + uri);
         }

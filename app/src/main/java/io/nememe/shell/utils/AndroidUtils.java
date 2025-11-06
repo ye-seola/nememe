@@ -9,7 +9,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
@@ -33,16 +35,51 @@ public class AndroidUtils {
     }
 
     private static Function<Intent, Void> getStartActivity() {
-        try {
-            return (intent) -> {
-                try {
-                    Context appContext = AEnvironment.getAppContext();
+        String callingPackageName = "io.nememe";
 
-                    InstrumentationHidden ih = Refine.unsafeCast(Objects.requireNonNull(AEnvironment.getMainThread().getInstrumentation()));
-                    ih.execStartActivity(appContext, null, null, null, intent, -1, new Bundle());
+        @SuppressLint("PrivateApi") Class<?> IActivityManagerStub = null;
+        try {
+            IActivityManagerStub = Class.forName("android.app.IActivityManager$Stub");
+            Class<?> IActivityManager = Class.forName("android.app.IActivityManager");
+            Class<?> IApplicationThread = Class.forName("android.app.IApplicationThread");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            // IApplicationThread caller, String callingPackage, String callingFeatureId,
+            // Intent intent, String resolvedType, IBinder resultTo, String resultWho,
+            // int requestCode, int flags, ProfilerInfo profilerInfo, Bundle options, int userId
+            Class<?> ProfilerInfo = Class.forName("android.app.ProfilerInfo");
+            Method method = IActivityManager.class.getMethod("startActivity", IApplicationThread.class, String.class, String.class, Intent.class, String.class, IBinder.class, String.class, int.class, int.class, ProfilerInfo, Bundle.class, int.class);
+
+            return intent -> {
+                try {
+                    IActivityManager am = ActivityManagerHidden.getService();
+                    method.invoke(am, null, callingPackageName, null, intent, intent.getType(), null, null, 0, 0, null, null, -3);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace(System.out);
                 }
+                return null;
+            };
+        } catch (Exception ignored) {
+        }
+
+        try {
+            // IApplicationThread, java.lang.String, android.content.Intent,
+            // java.lang.String, android.os.IBinder, java.lang.String,
+            // int, int, android.app.ProfilerInfo, android.os.Bundle, int
+            Class<?> ProfilerInfo = Class.forName("android.app.ProfilerInfo");
+            Method method = IActivityManager.class.getMethod("startActivityAsUser", IApplicationThread.class, String.class, Intent.class, String.class, IBinder.class, String.class, int.class, int.class, ProfilerInfo, Bundle.class, int.class);
+
+            return intent -> {
+                try {
+                    IActivityManager am = ActivityManagerHidden.getService();
+                    method.invoke(am, null, callingPackageName, intent, intent.getType(), null, null, 0, 0, null, null, -3);
+                } catch (Exception e) {
+                    e.printStackTrace(System.out);
+                }
+
                 return null;
             };
         } catch (Exception ignored) {
@@ -56,24 +93,14 @@ public class AndroidUtils {
         try {
             // IApplicationThread caller, Intent service, String resolvedType,
             // boolean requireForeground, String callingPackage, String callingFeatureId, int userId
-            Method m = IActivityManager.class.getDeclaredMethod("startService",
-                    IApplicationThread.class,
-                    Intent.class,
-                    String.class,
-                    Boolean.TYPE,
-                    String.class,
-                    String.class,
-                    Integer.TYPE
-            );
+            Method m = IActivityManager.class.getDeclaredMethod("startService", IApplicationThread.class, Intent.class, String.class, Boolean.TYPE, String.class, String.class, Integer.TYPE);
 
             return (intent) -> {
                 try {
                     IActivityManager am = ActivityManagerHidden.getService();
-                    m.invoke(
-                            am, null, intent, null, false, AEnvironment.PACKAGE_NAME, null, -3
-                    );
+                    m.invoke(am, null, intent, null, false, AEnvironment.PACKAGE_NAME, null, -3);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace(System.out);
                 }
                 return null;
             };
@@ -83,23 +110,14 @@ public class AndroidUtils {
         try {
             // IApplicationThread caller, Intent service, String resolvedType,
             // boolean requireForeground, in String callingPackage, int userId
-            Method m = IActivityManager.class.getDeclaredMethod("startService",
-                    IApplicationThread.class,
-                    Intent.class,
-                    String.class,
-                    Boolean.TYPE,
-                    String.class,
-                    Integer.TYPE
-            );
+            Method m = IActivityManager.class.getDeclaredMethod("startService", IApplicationThread.class, Intent.class, String.class, Boolean.TYPE, String.class, Integer.TYPE);
 
             return (intent) -> {
                 try {
                     IActivityManager am = ActivityManagerHidden.getService();
-                    m.invoke(
-                            am, null, intent, null, false, AEnvironment.PACKAGE_NAME, -3
-                    );
+                    m.invoke(am, null, intent, null, false, AEnvironment.PACKAGE_NAME, -3);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace(System.out);
                 }
                 return null;
             };
@@ -116,10 +134,6 @@ public class AndroidUtils {
     }
 
     private static String getMethodsByName(String methodName) {
-        return Arrays.stream(IActivityManager.class.getMethods())
-                .map(Method::toString)
-                .map(String::trim)
-                .filter(m -> m.contains(methodName))
-                .collect(Collectors.joining("\n"));
+        return Arrays.stream(IActivityManager.class.getMethods()).map(Method::toString).map(String::trim).filter(m -> m.contains(methodName)).collect(Collectors.joining("\n"));
     }
 }

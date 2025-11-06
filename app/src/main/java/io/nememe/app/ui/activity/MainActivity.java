@@ -1,8 +1,13 @@
 package io.nememe.app.ui.activity;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -15,12 +20,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -33,20 +40,13 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
     private ActivityMainBinding binding;
 
-    private final ServiceConnection connection = new ServiceConnection() {
+    private final BroadcastReceiver stateReceiver = new BroadcastReceiver() {
         @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            binding.onoffButton.setChecked(true);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            binding.onoffButton.setChecked(false);
-
-            binding.getRoot().postDelayed(() -> {
-                Intent intent = new Intent(MainActivity.this, ShellService.class);
-                bindService(intent, connection, 0);
-            }, 1000);
+        public void onReceive(Context context, Intent intent) {
+            if (Objects.requireNonNullElse(intent.getAction(), "").equals(ShellService.ACTION_PROCESS_STATUS)) {
+                boolean running = intent.getBooleanExtra("running", false);
+                binding.onoffButton.setChecked(running);
+            }
         }
     };
 
@@ -59,6 +59,9 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
         setSupportActionBar(binding.myToolbar);
 
         binding.onoffButton.setOnCheckedChangeListener((btn, checked) -> {
+            if (!btn.isPressed()) return;
+            btn.setChecked(!checked);
+
             if (checked) {
                 requestNotificationPermission();
             } else {
@@ -67,12 +70,6 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
         });
 
         binding.clearButton.setOnClickListener(v -> LogManager.getInstance().clear());
-
-        binding.console.setText(LogManager.getInstance().getFullLog());
-        scrollToBottom();
-
-        Intent intent = new Intent(MainActivity.this, ShellService.class);
-        bindService(intent, connection, 0);
     }
 
     private void scrollToBottom() {
@@ -88,15 +85,8 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
 
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                        NOTIFICATION_PERMISSION_REQUEST
-                );
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST);
             } else {
                 startShellService();
             }
@@ -105,10 +95,19 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(stateReceiver, new IntentFilter(ShellService.ACTION_PROCESS_STATUS), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(stateReceiver, new IntentFilter(ShellService.ACTION_PROCESS_STATUS));
+        }
+
         LogManager.getInstance().addListener(this);
+        binding.onoffButton.setChecked(ShellService.isRunning);
 
         binding.console.setText(LogManager.getInstance().getFullLog());
         scrollToBottom();
@@ -118,14 +117,11 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
     protected void onPause() {
         super.onPause();
         LogManager.getInstance().removeListener(this);
+        unregisterReceiver(stateReceiver);
     }
 
     @Override
-    public void onRequestPermissionsResult(
-            int requestCode,
-            @NonNull String[] permissions,
-            @NonNull int[] grantResults
-    ) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
@@ -144,7 +140,8 @@ public class MainActivity extends AppCompatActivity implements LogManager.LogLis
 
     private void stopShellService() {
         Intent intent = new Intent(this, ShellService.class);
-        stopService(intent);
+        intent.setAction(ShellService.ACTION_STOP);
+        startService(intent);
     }
 
     @Override

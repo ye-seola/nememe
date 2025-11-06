@@ -33,6 +33,11 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    packaging {
+        resources {
+            pickFirsts += "META-INF/**"
+        }
+    }
 }
 
 dependencies {
@@ -40,4 +45,6 @@ dependencies {
     compileOnly(project(":hidden-api"))
     implementation("dev.rikka.tools.refine:runtime:4.4.0")
     implementation("androidx.preference:preference-ktx:1.2.0")
+    implementation("io.vertx:vertx-core:5.0.5")
+    implementation("io.vertx:vertx-web:5.0.5")
 }

@@ -29,10 +29,13 @@ public class ShellService extends Service {
     private static final int NOTIFICATION_ID = 1001;
     private static final String CHANNEL_ID = "ShellService";
     public static final String ACTION_STOP = "io.nememe.shell.STOP_SERVICE";
+    public static final String ACTION_PROCESS_STATUS = "io.nememe.shell.PROCESS_STATUS";
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
-    private Thread serverThread;
+    private Thread shellThread;
     private Process process = null;
+
+    public static volatile boolean isRunning = false;
 
 
     @Override
@@ -56,7 +59,7 @@ public class ShellService extends Service {
         }
 
         updateNotification("실행 중");
-        startServer();
+        startShell();
 
         return START_STICKY;
     }
@@ -65,10 +68,10 @@ public class ShellService extends Service {
         ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).notify(NOTIFICATION_ID, createNotification(status));
     }
 
-    private void startServer() {
-        LogManager.getInstance().addLog("서버 시작");
+    private void startShell() {
+        LogManager.getInstance().addLog("Nememe 시작");
 
-        serverThread = new Thread(() -> {
+        shellThread = new Thread(() -> {
             process = null;
 
             try {
@@ -84,6 +87,9 @@ public class ShellService extends Service {
                 ProcessBuilder pb = new ProcessBuilder("su", "-c", String.format("/system/bin/app_process -cp %s / --nice-name=nememe_shell io.nememe.shell.Main", apkPath));
                 pb.redirectErrorStream(true);
                 process = pb.start();
+
+                isRunning = true;
+                notifyProcessStatus();
 
                 BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream())
@@ -107,15 +113,25 @@ public class ShellService extends Service {
                     process = null;
                 }
 
-                serverThread = null;
+                shellThread = null;
+
+                isRunning = false;
+                notifyProcessStatus();
+
                 stopSelf();
             }
         });
-        serverThread.start();
+        shellThread.start();
     }
 
+    private void notifyProcessStatus() {
+        Intent intent = new Intent(ACTION_PROCESS_STATUS);
+        intent.setPackage(getPackageName());
+        intent.putExtra("running", isRunning);
+        sendBroadcast(intent);
+    }
 
-    private void stopServer() {
+    private void stopShell() {
         if (process != null) {
             try {
                 process.getOutputStream().close();
@@ -123,21 +139,23 @@ public class ShellService extends Service {
             }
         }
 
-        if (serverThread != null) {
-            serverThread.interrupt();
+        if (shellThread != null) {
             try {
-                serverThread.join(5000);
+                shellThread.join(5000);
             } catch (InterruptedException ignored) {
             }
-            serverThread = null;
+
+            shellThread = null;
         }
 
-        LogManager.getInstance().addLog("서버 중지됨");
+        LogManager.getInstance().addLog("Nememe 중지됨");
     }
 
     @Override
     public void onDestroy() {
-        stopServer();
+        isRunning = false;
+
+        stopShell();
         releaseLocks();
     }
 
@@ -146,7 +164,9 @@ public class ShellService extends Service {
         return null;
     }
 
-    /** @noinspection deprecation*/
+    /**
+     * @noinspection deprecation
+     */
     @SuppressLint("WakelockTimeout")
     private void acquireLocks() {
         // Wake Lock
