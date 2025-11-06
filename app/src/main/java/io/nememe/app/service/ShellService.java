@@ -15,6 +15,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
+import androidx.preference.PreferenceManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -84,16 +85,20 @@ public class ShellService extends Service {
 
                 String apkPath = appInfo.sourceDir;
 
-                ProcessBuilder pb = new ProcessBuilder("su", "-c", String.format("/system/bin/app_process -cp %s / --nice-name=nememe_shell io.nememe.shell.Main", apkPath));
+                var mgr = PreferenceManager.getDefaultSharedPreferences(this);
+                ProcessBuilder pb = new ProcessBuilder(
+                        "su", "-c",
+                        String.format("/system/bin/app_process -cp %s / --nice-name=nememe_shell io.nememe.shell.Main %s",
+                                apkPath, mgr.getString("port", "7070")
+                        ));
+
                 pb.redirectErrorStream(true);
                 process = pb.start();
 
                 isRunning = true;
                 notifyProcessStatus();
 
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream())
-                );
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -171,18 +176,12 @@ public class ShellService extends Service {
     private void acquireLocks() {
         // Wake Lock
         PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(
-                PowerManager.FULL_WAKE_LOCK,
-                "ServerService::WakeLock"
-        );
+        wakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "ServerService::WakeLock");
         wakeLock.acquire();
 
         // WiFi Lock
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        wifiLock = wifiManager.createWifiLock(
-                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                "ServerService::WifiLock"
-        );
+        wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ServerService::WifiLock");
         wifiLock.acquire();
     }
 
@@ -199,11 +198,7 @@ public class ShellService extends Service {
     }
 
     private void createNotificationChannel() {
-        NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "Nememe 서비스",
-                NotificationManager.IMPORTANCE_LOW
-        );
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Nememe 서비스", NotificationManager.IMPORTANCE_LOW);
         channel.setDescription("Nememe가 백그라운드에서 실행 중입니다");
 
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
@@ -213,32 +208,11 @@ public class ShellService extends Service {
     private Notification createNotification(String status) {
         Intent stopIntent = new Intent(this, ShellService.class);
         stopIntent.setAction(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getService(
-                this,
-                0,
-                stopIntent,
-                PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
 
         Intent mainIntent = new Intent(this, MainActivity.class);
-        PendingIntent mainPendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                mainIntent,
-                PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent mainPendingIntent = PendingIntent.getActivity(this, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE);
 
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Nememe")
-                .setContentText(status)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setOngoing(true)
-                .setContentIntent(mainPendingIntent)
-                .addAction(
-                        android.R.drawable.ic_delete,
-                        "중지",
-                        stopPendingIntent
-                )
-                .build();
+        return new NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle("Nememe").setContentText(status).setSmallIcon(android.R.drawable.ic_dialog_info).setOngoing(true).setContentIntent(mainPendingIntent).addAction(android.R.drawable.ic_delete, "중지", stopPendingIntent).build();
     }
 }

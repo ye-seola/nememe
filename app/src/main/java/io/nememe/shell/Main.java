@@ -155,9 +155,11 @@ public class Main {
                 });
 
         try {
+            var port = Integer.parseInt(args[0]);
+            System.out.println("포트: " + port);
 
             server = vertx.createHttpServer();
-            server.requestHandler(router).listen(7070);
+            server.requestHandler(router).listen(port);
 
             System.out.println("웹서버가 실행되었습니다");
 

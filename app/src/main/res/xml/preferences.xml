@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:icon="@drawable/outline_autorenew_24"
         app:key="autostart"
-        app:title="부팅 시 자동 실행"
-        app:icon="@drawable/outline_autorenew_24" />
+        app:title="부팅 시 자동 실행" />
+
+    <EditTextPreference
+        app:defaultValue="7070"
+        app:key="port"
+        app:title="Nememe 포트" />
 
 </PreferenceScreen>
